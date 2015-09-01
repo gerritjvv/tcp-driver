@@ -9,6 +9,8 @@ Writing the TCP connection as if it were a product driver sets a certain design 
 
 For design decisions see: https://github.com/gerritjvv/tcp-driver/blob/master/doc/intro.md
 
+[![Build Status](https://travis-ci.org/gerritjvv/tcp-driver.svg)](https://travis-ci.org/gerritjvv/tcp-driver)
+
 ## Usage
 
 Under construction
