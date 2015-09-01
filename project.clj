@@ -7,6 +7,7 @@
   :global-vars {*warn-on-reflection* true
                 *assert* true}
 
+  :javac-options ["-target" "1.8" "-source" "1.8" "-Xlint:-options"]
   :jvm-opts ["-Xmx1g"]
 
   :source-paths ["src/clojure"]

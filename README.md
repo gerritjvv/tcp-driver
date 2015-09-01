@@ -1,14 +1,21 @@
 # tcp-driver
 
-A Clojure library designed to ... well, that part is up to you.
+The idea is the access TCP client connections like any other product driver code would e.g the cassandra or mondodb driver.<br/>
+
+There are allot of situations where software in the past (my own experience) became unstable because the TCP connections
+were not written or treated with the equivalent importance as server connections.
+
+Writing the TCP connection as if it were a product driver sets a certain design mindset.
+
+For design decisions see: https://github.com/gerritjvv/tcp-driver/blob/master/doc/intro.md
 
 ## Usage
 
-FIXME
+Under construction
+
 
 ## License
 
-Copyright © 2015 FIXME
+Copyright © 2015 gerritjvv
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the Eclipse Public License either version 1.0

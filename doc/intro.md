@@ -152,8 +152,8 @@ any value in terms of performance. It only adds complications. The reasons are:
         else
            ret-val
            
-    NS: rounting
-      Protocol IRounting
+    NS: routing
+      Protocol IRouting
         select-host 
         add-host
         remove-host
