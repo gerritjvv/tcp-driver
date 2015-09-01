@@ -1,8 +1,6 @@
 package tcpdriver.io;
 
 
-import com.sun.org.apache.xerces.internal.impl.dv.xs.StringDV;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

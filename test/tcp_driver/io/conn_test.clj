@@ -8,13 +8,17 @@
     [clojure.test :refer :all]))
 
 (defn echo-handler [conn]
-  (tcp-stream/write-bytes conn (tcp-stream/read-bytes conn 5000)))
+  (prn "echo-handler: " conn)
+  (let [bts (tcp-stream/read-bytes conn 5000)]
+    (prn "echo-handler: got-bytes: " bts)
+    (tcp-stream/write-bytes conn bts)
+    (tcp-stream/flush-out conn)))
 
 (defn echo-server []
   (test-util/create-server echo-handler))
 
 
-(deftest test-send-receive []
+(defn test-send-receive []
   (let [server (echo-server)
         conn (tcp-conn/create-tcp-conn {:host "localhost" :port (:port server)})]
 
@@ -23,3 +27,6 @@
       (is (= "test-string" (tcp-stream/read-short-str conn 5000)))
       (finally
         (tcp-conn/close! conn)))))
+
+(deftest send-receive-testcase []
+                               (test-send-receive))

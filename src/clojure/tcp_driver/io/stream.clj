@@ -3,7 +3,8 @@
           using blockign IO but supporting timeouts without the need to create background threads"}
   tcp-driver.io.stream
   (:require [tcp-driver.io.conn :as tcp-conn])
-  (:import (tcpdriver.io IOUtil)))
+  (:import (tcpdriver.io IOUtil)
+           (java.io OutputStream)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;
@@ -45,6 +46,9 @@
 (defn read-short-str ^String
 [ conn ^long timeout-ms]
   (IOUtil/readShortString (tcp-conn/input-stream conn) timeout-ms))
+
+(defn flush-out [conn]
+  (.flush ^OutputStream (tcp-conn/output-stream conn)))
 
 (defn write-bytes
   ([conn ^"[B" bts ^long from ^long len]
