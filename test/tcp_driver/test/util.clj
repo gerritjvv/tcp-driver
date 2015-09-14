@@ -43,10 +43,16 @@
 
 (defn echo-handler [conn]
   (prn "echo-handler: " conn)
-  (let [bts (tcp-stream/read-bytes conn 5000)]
-    (prn "echo-handler: got-bytes: " bts)
-    (tcp-stream/write-bytes conn bts)
-    (tcp-stream/flush-out conn)))
+  (let [bts (tcp-stream/read-bytes conn 10000)]
+    ;;we need to ensure we have some bytes
+    (if (pos? (count bts))
+      (do
+        (tcp-stream/write-bytes conn bts)
+        (tcp-stream/flush-out conn)
+        (tcp-conn/close! conn))
+      (do
+        (Thread/sleep 1000)
+        (recur conn)))))
 
 (defn echo-server
   "Return {:port :server-socket and :future-loop}"

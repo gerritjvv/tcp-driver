@@ -10,14 +10,15 @@
 
 
 (defn test-send-receive []
-  (let [server (test-util/echo-server)
-        conn (tcp-conn/create-tcp-conn {:host "localhost" :port (:port server)})]
+  (test-util/with-echo-server
+    (fn [server]
+      (let [conn (tcp-conn/create-tcp-conn {:host "localhost" :port (:port server)})]
 
-    (try
-      (tcp-stream/write-short-str conn "test-string")
-      (is (= "test-string" (tcp-stream/read-short-str conn 5000)))
-      (finally
-        (tcp-conn/close! conn)))))
+        (try
+          (tcp-stream/write-short-str conn "test-string")
+          (is (= "test-string" (tcp-stream/read-short-str conn 5000)))
+          (finally
+            (tcp-conn/close! conn)))))))
 
 (deftest send-receive-testcase []
                                (test-send-receive))
