@@ -1,5 +1,6 @@
 (ns tcp-driver.test.util
-  (:require [tcp-driver.io.conn :as tcp-conn])
+  (:require [tcp-driver.io.conn :as tcp-conn]
+            [tcp-driver.io.stream :as tcp-stream])
   (:import (java.net ServerSocket SocketException)))
 
 (defn ^ServerSocket server-socket []
@@ -38,3 +39,23 @@
 (defn stop-server [{:keys [server-socket future-loop]}]
   (.close ^ServerSocket server-socket)
   (future-cancel future-loop))
+
+
+(defn echo-handler [conn]
+  (prn "echo-handler: " conn)
+  (let [bts (tcp-stream/read-bytes conn 5000)]
+    (prn "echo-handler: got-bytes: " bts)
+    (tcp-stream/write-bytes conn bts)
+    (tcp-stream/flush-out conn)))
+
+(defn echo-server
+  "Return {:port :server-socket and :future-loop}"
+  []
+  (create-server echo-handler))
+
+(defn with-echo-server [f]
+  (let [server (echo-server)]
+    (try
+      (f server)
+      (finally
+        (stop-server server)))))

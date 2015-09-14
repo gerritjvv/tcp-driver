@@ -2,6 +2,7 @@
   ^{:doc "TCP Connection abstractions and implementations
           see host-address and tcp-conn-factory"}
   tcp-driver.io.conn
+  (:require [schema.core :as s])
   (:import
     (java.net InetAddress Socket SocketAddress InetSocketAddress)
     (org.apache.commons.pool2 BaseKeyedPooledObjectFactory PooledObject KeyedPooledObjectFactory)
@@ -12,6 +13,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;Protocol & Data
 
+(def HostAddressSchema {:host s/Str :port s/Int})
 
 (defrecord HostAddress [^String host ^int port])
 
@@ -20,6 +22,8 @@
   (-output-stream [this])
   (-close [this])
   (-valid? [this]))
+
+(def ITCPConnSchema (s/pred (partial extends? ITCPConn)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;Private
@@ -74,12 +78,14 @@
 
 (defn ^KeyedPooledObjectFactory tcp-conn-factory
   "Return a keyed pool factory that return ITCPConn instances
-   The keys used should always be instances of HostAddress"
+   The keys used should always be instances of HostAddress or implement host and port keys"
   []
   (proxy
     [BaseKeyedPooledObjectFactory]
     []
     (create [address]
+      (s/validate HostAddressSchema address)
+
       (create-tcp-conn address))
 
     (wrap [v] (DefaultPooledObject. v))

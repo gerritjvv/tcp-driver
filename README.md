@@ -13,7 +13,8 @@ For design decisions see: https://github.com/gerritjvv/tcp-driver/blob/master/do
 
 ## Usage
 
-Under construction
+### Connection Pooling
+
 
 
 ## License
