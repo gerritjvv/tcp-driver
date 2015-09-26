@@ -13,7 +13,7 @@
 (defn borrow-send-and-return []
   (test-util/with-echo-server
     (fn [server]
-      (let [pool (tcp-pool/create-tcp-pool {})
+      (let [pool (tcp-pool/create-tcp-pool {:close-pool-jvm-shutdown true})
             host (tcp-conn/host-address "localhost" (:port server))
 
             resp-str (tcp-pool/try-conn pool host 1000

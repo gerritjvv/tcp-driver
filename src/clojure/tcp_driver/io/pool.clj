@@ -22,7 +22,8 @@
 (def PoolConfSchema {(s/optional-key :max-idle-per-key) s/Int
                      (s/optional-key :max-total) s/Int
                      (s/optional-key :max-total-per-key) s/Int
-                     (s/optional-key :min-idle-per-key) s/Int})
+                     (s/optional-key :min-idle-per-key) s/Int
+                     (s/optional-key :close-pool-jvm-shutdown) s/Bool})
 
 (defprotocol IPool
   (-borrow [this key timeout-ms])
@@ -121,8 +122,14 @@
   create-tcp-pool :- IPoolSchema
   [conf :- PoolConfSchema]
   ;;create a tcp pool factory where each key is the address to connect to
-  (->KeyedTCPConnFactory (GenericKeyedObjectPool. (tcp-conn/tcp-conn-factory)
-                                                  (keyed-pool-config conf))))
+  (let [pool
+        (->KeyedTCPConnFactory (GenericKeyedObjectPool. (tcp-conn/tcp-conn-factory)
+                                                        (keyed-pool-config conf)))]
+
+    (when (:close-pool-jvm-shutdown conf)
+      (.addShutdownHook (Runtime/getRuntime) (Thread. #(close pool))))
+
+    pool))
 
 
 (defn try-conn
