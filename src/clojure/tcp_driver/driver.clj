@@ -26,7 +26,8 @@
     [schema.core :as s]
     [tcp-driver.io.pool :as tcp-pool]
     [tcp-driver.io.conn :as tcp-conn]
-    [tcp-driver.routing.policy :as routing]))
+    [tcp-driver.routing.policy :as routing]
+    [tcp-driver.routing.retry :as retry]))
 
 
 ;;;;;;;;;;;;;;
@@ -34,40 +35,59 @@
 
 (def IRouteSchema (s/pred #(satisfies? routing/IRoute %)))
 
+(def IRetrySchema (s/pred #(satisfies? retry/IRetry %)))
+
 (def DriverRetSchema {:pool tcp-pool/IPoolSchema
-                      :bootstrap-hosts [tcp-conn/HostAddressSchema]
                       :routing-policy IRouteSchema
-                      :routing-env {:hosts s/Any}})
+                      :retry-policy IRetrySchema})
 
 
 ;;;;;;;;;;;;;;
 ;;;;;; Private functions
 
+(defn throw-no-connection! []
+  (throw (RuntimeException. "No connection is available to perform the send")))
 
-
-(defn select-send
+(defn select-send!
   "ctx - DriverRetSchema
    io-f - function that takes a connection and on error throws an exception
    timeout-ms - connection timeout"
   [ctx io-f timeout-ms]
-  (if [host (routing/-select-host (:routing-policy ctx))]
-    (do
-      ;;we have a host
-      ;; do send retry here
-      )
-    (throw (RuntimeException. "No connection is available to perform the send"))))
+  (if-let [host (routing/-select-host (:routing-policy ctx))]
+    (let [pool (:pool ctx)]
+      (if-let [conn (tcp-pool/borrow pool host timeout-ms)]
+        (try
+          (io-f conn)
+          (finally
+            (tcp-pool/return pool host conn)))
+        (throw-no-connection!)))
+    (throw-no-connection!)))
+
+(defn retry-select-send!
+  "Send with the retry-policy, select-send! will be retried depending on the retry policy"
+  [{:keys [retry-policy]} io-f timeout-ms]
+  (retry/with-retry retry-policy #(select-send! ctx io-f timeout-ms)))
 
 ;;;;;;;;;;;;;;;;
 ;;;;;; Public API
 
+(defn send-f
+  "
+   Apply the io-f with a connection from the connection pool selected based on
+     the retry policy, and retried if exceptions in the io-f based on the retry policy
+   ctx - returned from create
+   io-f - function that should accept the tcp-driver.io.conn/ITCPConn
+   timeout-ms - the timeout for connection borrow"
+  [ctx io-f timeout-ms]
+  (retry-select-send! ctx io-f timeout-ms))
+
 ;; rounting-policy is a function to which we pass the rounting-env atom, which contains {:hosts (set [tcp-conn/HostAddressSchema]) } by default
-(s/defn create [bootstrap-hosts :- [tcp-conn/HostAddressSchema]
-                pool-conf       :- tcp-pool/PoolConfSchema
+(s/defn create [pool-conf       :- tcp-pool/PoolConfSchema
                 routing-policy  :- IRouteSchema
-                retry-policy    :- s/Any
+                retry-policy    :- IRetrySchema
                 conf] :- DriverRetSchema
   {:pool (tcp-pool/create-tcp-pool pool-conf)
    :rounting-policy routing-policy
-   :rounting-env (atom {:hosts (set bootstrap-hosts)})})
+   :retry-policy retry-policy})
 
 
