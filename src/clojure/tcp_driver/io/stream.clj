@@ -73,7 +73,7 @@
   (IOUtil/write (tcp-conn/output-stream conn) v))
 
 (defn write-float
-  [ conn ^long v]
+  [ conn ^double v]
   (IOUtil/write (tcp-conn/output-stream conn) (float v)))
 
 (defn write-double

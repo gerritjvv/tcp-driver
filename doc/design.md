@@ -70,7 +70,7 @@ any value in terms of performance. It only adds complications. The reasons are:
   IRouting
      select-host [ custom-env hosts ] : Host
      
-## I/O Timeouts
+## I/O Timeouts 
   
   Support IO timeout see: https://github.com/gerritjvv/kafka-fast/blob/master/kafka-clj/java/kafka_clj/util/IOUtil.java#L37
   
@@ -91,12 +91,8 @@ any value in terms of performance. It only adds complications. The reasons are:
   * write-double ...
   .... for all primitives 
   * write-short-str [writer string]
-  
-  IReader
-    -read-bytes [_ bts-len timeout-ms] : byte-array
-    
-  IWriter
-    -write-bytes [ bts-len timeout-ms ]
+ 
+ Implemented using ```tcp-driver.io.stream```
   
 # Implementation
 
