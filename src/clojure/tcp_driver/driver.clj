@@ -43,16 +43,19 @@
 ;;;;;;;;;;;;;;
 ;;;;;; Private functions
 
-(defn routing-hosts
-  "Extract and deref the routing hosts"
-  [ctx]
-  @(get-in ctx [:rounting-env :hosts]))
 
-(defn select-host [{:keys [routing-policy rounting-env]}]
-  (routing-policy rounting-env))
 
-(defn select-send [ctx io-f timeout-ms]
-  (let []))
+(defn select-send
+  "ctx - DriverRetSchema
+   io-f - function that takes a connection and on error throws an exception
+   timeout-ms - connection timeout"
+  [ctx io-f timeout-ms]
+  (if [host (routing/-select-host (:routing-policy ctx))]
+    (do
+      ;;we have a host
+      ;; do send retry here
+      )
+    (throw (RuntimeException. "No connection is available to perform the send"))))
 
 ;;;;;;;;;;;;;;;;
 ;;;;;; Public API
