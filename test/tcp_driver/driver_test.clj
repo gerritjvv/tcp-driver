@@ -25,11 +25,12 @@
                       driver
                       io-f
                       10000)]
-
-        (= ret-msg "HI")))))
+        ;;use ret-msg to make it clear thta io-f return value via tcp-driver/send-f
+        ret-msg))))
 
 
 (deftest test-send-receive
   []
   ;;write hi, then read it
-  (send-io-f #(read-msg (write-msg % "HI") 1000)))
+ (is (=  (send-io-f #(read-msg (write-msg % "HI") 1000))
+         "HI")))
