@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+lein eastwood "{:exclude-linters [:unused-ret-vals] :exclude-namespaces [tcp-driver.io.conn-test tcp-driver.io.pool-test tcp-driver.routing.policy-test tcp-driver.routing.retry-test tcp-driver.test.util tcp-driver.driver-test]}"
