@@ -39,7 +39,7 @@ For design decisions see: https://github.com/gerritjvv/tcp-driver/blob/master/do
                       driver
                       io-f
                       10000)]
-        ;;use ret-msg to make it clear thta io-f return value via tcp-driver/send-f
+        ;;use ret-msg to make it clear that io-f return value via tcp-driver/send-f
         ret-msg))))
 
 ;;write hi message and read the response from the echo server
@@ -48,6 +48,13 @@ For design decisions see: https://github.com/gerritjvv/tcp-driver/blob/master/do
         (write-msg % "HI") 1000))
      "HI")
 ```
+
+## IO Stream Util functions
+
+The namespace ```tcp-driver.io.stream``` provides helper functions to work with  
+writing an reading data from the tcp connections returned by the driver
+
+See: https://github.com/gerritjvv/tcp-driver/blob/master/doc/stream.md
 
 ### Connection Pooling
 
