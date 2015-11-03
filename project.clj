@@ -17,4 +17,6 @@
 
                  [fun-utils "0.5.9"]
                  [org.apache.commons/commons-pool2 "2.4.2"]
-                 [prismatic/schema "1.0.1"]])
+                 [prismatic/schema "1.0.1"]]
+
+  :plugins [[jonase/eastwood "0.2.1"]])

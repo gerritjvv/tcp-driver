@@ -1,5 +1,5 @@
 language: clojure
-script: lein test
+script: ./build.sh
 
 jdk:
  oraclejdk8

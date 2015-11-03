@@ -13,7 +13,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;Protocol & Data
 
-(def HostAddressSchema {:host s/Str :port s/Int})
+(def HostAddressSchema {:host s/Str :port s/Int s/Any s/Any})
 
 (defrecord HostAddress [^String host ^int port])
 

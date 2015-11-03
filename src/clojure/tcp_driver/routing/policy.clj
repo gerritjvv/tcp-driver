@@ -54,6 +54,7 @@
 
 (defn create-default-routing-policy
   "Create a rounting policy instance that manages blacklisted hosts and on select-host
+   hosts : HostAddressSchema
    returns the host that is not blacklisted, select-f is used for this, note that by default rand-nth is used"
   [hosts
    & {:keys [select-f
@@ -63,7 +64,6 @@
          (fn? select-f)
          (number? blacklist-expire)]}
 
-  (prn "Create with blacklist-expire " blacklist-expire)
   (->DefaultRountingPolicy
     (atom (into #{} hosts))
     (cache/create-cache :expire-after-write blacklist-expire)

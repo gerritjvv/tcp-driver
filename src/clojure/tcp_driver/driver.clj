@@ -37,6 +37,8 @@
 
 (def IRetrySchema (s/pred #(satisfies? retry/IRetry %)))
 
+(def IPoolSchema  (s/pred #(satisfies? tcp-pool/IPool %)))
+
 (def DriverRetSchema {:pool tcp-pool/IPoolSchema
                       :routing-policy IRouteSchema
                       :retry-policy IRetrySchema})
@@ -53,6 +55,7 @@
    io-f - function that takes a connection and on error throws an exception
    timeout-ms - connection timeout"
   [ctx io-f timeout-ms]
+  {:pre [ctx io-f timeout-ms]}
   (if-let [host (routing/-select-host (:routing-policy ctx))]
     (let [pool (:pool ctx)]
       (if-let [conn (tcp-pool/borrow pool host timeout-ms)]
@@ -65,8 +68,19 @@
 
 (defn retry-select-send!
   "Send with the retry-policy, select-send! will be retried depending on the retry policy"
-  [{:keys [retry-policy]} io-f timeout-ms]
+  [{:keys [retry-policy] :as ctx} io-f timeout-ms]
+  {:pre [retry-policy]}
   (retry/with-retry retry-policy #(select-send! ctx io-f timeout-ms)))
+
+
+;; routing-policy is a function to which we pass the routing-env atom, which contains {:hosts (set [tcp-conn/HostAddressSchema]) } by default
+(s/defn create [pool            :- IPoolSchema
+                routing-policy  :- IRouteSchema
+                retry-policy    :- IRetrySchema
+                ] :- DriverRetSchema
+  {:pool pool
+   :routing-policy routing-policy
+   :retry-policy retry-policy})
 
 ;;;;;;;;;;;;;;;;
 ;;;;;; Public API
@@ -81,13 +95,26 @@
   [ctx io-f timeout-ms]
   (retry-select-send! ctx io-f timeout-ms))
 
-;; rounting-policy is a function to which we pass the rounting-env atom, which contains {:hosts (set [tcp-conn/HostAddressSchema]) } by default
-(s/defn create [pool-conf       :- tcp-pool/PoolConfSchema
-                routing-policy  :- IRouteSchema
-                retry-policy    :- IRetrySchema
-                conf] :- DriverRetSchema
-  {:pool (tcp-pool/create-tcp-pool pool-conf)
-   :rounting-policy routing-policy
-   :retry-policy retry-policy})
 
+(defn create-default
+  "Create a driver with the default settings for tcp-pool, routing and retry-policy
+   hosts: a vector or seq of {:host :port} maps
+   return: DriverRetSchema
+  "
+  ^{:arg-lists [routing-conf pool-conf retry-limit]}
+  [hosts & {:keys [routing-conf pool-conf retry-limit] :or {retry-limit 10 routing-conf {} pool-conf {}}}]
+  {:pre [
+         (s/validate tcp-pool/PoolConfSchema pool-conf)
+         (s/validate [tcp-conn/HostAddressSchema] hosts)
+         (number? retry-limit)
+         ]}
+  (create
+    (tcp-pool/create-tcp-pool pool-conf)
+    (apply routing/create-default-routing-policy hosts (mapcat identity routing-conf))
+    (retry/retry-policy retry-limit)))
 
+(defn close
+  "Close the driver connection pool"
+  ^{:arg-lists [pool]}
+  [{:keys [pool]}]
+  (tcp-pool/close pool))
