@@ -39,7 +39,7 @@ For design decisions see: https://github.com/gerritjvv/tcp-driver/blob/master/do
                       driver
                       io-f
                       10000)]
-        ;;use ret-msg to make it clear thta io-f return value via tcp-driver/send-f
+        ;;use ret-msg to make it clear that io-f return value via tcp-driver/send-f
         ret-msg))))
 
 ;;write hi message and read the response from the echo server
@@ -49,8 +49,41 @@ For design decisions see: https://github.com/gerritjvv/tcp-driver/blob/master/do
      "HI")
 ```
 
+## IO Stream Util functions
+
+The namespace ```tcp-driver.io.stream``` provides helper functions to work with  
+writing an reading data from the tcp connections returned by the driver
+
+See: https://github.com/gerritjvv/tcp-driver/blob/master/doc/stream.md
+
+## Driver Configuration
+
+The ```tcp-driver.driver/create-default``` function takes several args   
+```[hosts & {:keys [routing-conf pool-conf retry-limit] :or {retry-limit 10 routing-conf {} pool-conf {}}}]```
+
 ### Connection Pooling
 
+
+The pool-conf arg must have the schema ```tcp-driver.io.pool/PoolConfSchema``` and can be used to 
+configure the default tcp pool.
+
+See: https://github.com/gerritjvv/tcp-driver/blob/master/doc/pool.md
+
+### Routing Policy
+
+The routing-conf arg must have the schema ```{:keys [select-f blacklist-expire]}```
+
+The default select-f used is rand-nth.  
+The function will receive a list of host map items and can select between any of them.  
+
+
+
+### Retry Policy
+
+The default retry policy is used in the ```tcp-driver.driver/create-default``` function,  
+to configure a custom retry policy use the ```tcp-driver.driver/create``` function.  
+
+See: https://github.com/gerritjvv/tcp-driver/blob/master/doc/retry.md
 
 
 ## License
