@@ -11,6 +11,9 @@ For design decisions see: https://github.com/gerritjvv/tcp-driver/blob/master/do
 
 [![Build Status](https://travis-ci.org/gerritjvv/tcp-driver.svg)](https://travis-ci.org/gerritjvv/tcp-driver)
 
+[![Clojars Project](https://img.shields.io/clojars/v/tcp-driver.svg)](https://clojars.org/tcp-driver)
+
+
 ## Usage
 
 ```clojure
@@ -84,6 +87,14 @@ The default retry policy is used in the ```tcp-driver.driver/create-default``` f
 to configure a custom retry policy use the ```tcp-driver.driver/create``` function.  
 
 See: https://github.com/gerritjvv/tcp-driver/blob/master/doc/retry.md
+
+
+## Feature complete/updates/maintenance
+
+This library is considered complete from what I set out to create, 
+any pull requests, suggestions or bug reports are welcome, note that if I do not respond
+to PR or Issues opened feel free to ping me via email gerritjvv@gmail.com, git hub's notifications
+do not always work :) 
 
 
 ## License
