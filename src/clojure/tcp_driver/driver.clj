@@ -28,7 +28,7 @@
     [tcp-driver.io.pool :as tcp-pool]
     [tcp-driver.io.conn :as tcp-conn]
     [tcp-driver.routing.policy :as routing]
-    [tcp-driver.routing.retry :as retry]))
+    [tcp-driver.routing.retry :as retry]) (:import (java.io IOException)))
 
 
 ;;;;;;;;;;;;;;
@@ -71,6 +71,10 @@
 
                                              (try
                                                (io-f conn)
+                                               (catch IOException e
+                                                 ;;any io exception will cause invalidation of the connection.
+                                                 (tcp-pool/invalidate pool host conn)
+                                                 (throw e))
                                                (finally
                                                  (tcp-pool/return pool host conn)))
 
