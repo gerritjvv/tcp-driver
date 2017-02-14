@@ -53,52 +53,58 @@
 
 (defn select-send!
       "ctx - DriverRetSchema
+       host-address if specified this host is used, otherwise the routing policy is asked for a host
        io-f - function that takes a connection and on error throws an exception
        timeout-ms - connection timeout"
-      [ctx io-f timeout-ms]
-      {:pre [ctx io-f timeout-ms]}
-      (loop [i 0]
-            (if-let [host (routing/-select-host (:routing-policy ctx))]
+      ([ctx io-f timeout-ms]
+        (select-send! ctx nil io-f timeout-ms))
+      ([ctx host-address io-f timeout-ms]
+        {:pre [ctx io-f timeout-ms]}
+        (loop [i 0]
+              (if-let [host (if host-address host-address (routing/-select-host (:routing-policy ctx)))]
 
-                    (let [pool (:pool ctx)]
+                      (let [pool (:pool ctx)]
 
-                         ;;;try the io-f, if an exception then only if we haven't tried (count hosts) already
-                         ;;;loop and retry, its expected that the routing policy blacklist or remove the host on error
+                           ;;;try the io-f, if an exception then only if we haven't tried (count hosts) already
+                           ;;;loop and retry, its expected that the routing policy blacklist or remove the host on error
 
-                         (let [res (try
+                           (let [res (try
 
-                                     (if-let [conn (tcp-pool/borrow pool host timeout-ms)]
+                                       (if-let [conn (tcp-pool/borrow pool host timeout-ms)]
 
-                                             (try
-                                               (io-f conn)
-                                               (catch IOException e
-                                                 ;;any io exception will cause invalidation of the connection.
-                                                 (tcp-pool/invalidate pool host conn)
-                                                 (throw e))
-                                               (finally
-                                                 (tcp-pool/return pool host conn)))
+                                               (try
+                                                 (io-f conn)
+                                                 (catch IOException e
+                                                   ;;any io exception will cause invalidation of the connection.
+                                                   (tcp-pool/invalidate pool host conn)
+                                                   (throw e))
+                                                 (finally
+                                                   (tcp-pool/return pool host conn)))
 
-                                             (throw-no-connection!))
+                                               (throw-no-connection!))
 
-                                     (catch Exception t
-                                       (routing/-on-error! (:routing-policy ctx) host t)
-                                       (ex-info (str "Error while connecting to " host) {:throwable t :host host :retries i :hosts (routing/-hosts (:routing-policy ctx))})))]
+                                       (catch Exception t
+                                         (routing/-on-error! (:routing-policy ctx) host t)
+                                         (ex-info (str "Error while connecting to " host) {:throwable t :host host :retries i :hosts (routing/-hosts (:routing-policy ctx))})))]
 
-                              (if (instance? Throwable res)
-                                (do
-                                  (error res)
-                                  (if (< i (count (routing/-hosts (:routing-policy ctx))))
-                                    (recur (inc i))
-                                    (throw res)))
-                                res)))
+                                (if (instance? Throwable res)
+                                  (do
+                                    (error res)
+                                    (if (< i (count (routing/-hosts (:routing-policy ctx))))
+                                      (recur (inc i))
+                                      (throw res)))
+                                  res)))
 
-                    (throw-no-connection!))))
+                      (throw-no-connection!)))))
 
 (defn retry-select-send!
       "Send with the retry-policy, select-send! will be retried depending on the retry policy"
-      [{:keys [retry-policy] :as ctx} io-f timeout-ms]
-      {:pre [retry-policy]}
-      (retry/with-retry retry-policy #(select-send! ctx io-f timeout-ms)))
+      ([{:keys [retry-policy] :as ctx} host-address io-f timeout-ms]
+        {:pre [retry-policy]}
+        (retry/with-retry retry-policy #(select-send! ctx host-address io-f timeout-ms)))
+      ([{:keys [retry-policy] :as ctx} io-f timeout-ms]
+        {:pre [retry-policy]}
+        (retry/with-retry retry-policy #(select-send! ctx io-f timeout-ms))))
 
 
 ;; routing-policy is a function to which we pass the routing-env atom, which contains {:hosts (set [tcp-conn/HostAddressSchema]) } by default
@@ -120,8 +126,10 @@
        ctx - returned from create
        io-f - function that should accept the tcp-driver.io.conn/ITCPConn
        timeout-ms - the timeout for connection borrow"
-      [ctx io-f timeout-ms]
-      (retry-select-send! ctx io-f timeout-ms))
+      ([ctx host-address io-f timeout-ms]
+        (retry-select-send! ctx host-address io-f timeout-ms))
+      ([ctx io-f timeout-ms]
+        (retry-select-send! ctx io-f timeout-ms)))
 
 
 (defn create-default
