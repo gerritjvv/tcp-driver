@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Protocol interface and default implementation for routing and blacklisting hosts
-          The defualt rounting is done randomly and the blacklisting uses a TTL Cache"}
+          The default rounting is done randomly and the blacklisting uses a TTL Cache"}
   tcp-driver.routing.policy
   (:require [schema.core :as s]
             [fun-utils.cache :as cache]
@@ -13,10 +13,11 @@
 ;;;;; Protocols and records
 
 (defprotocol IRoute
-  (-add-host! [this host])
-  (-remove-host! [this host])
-  (-blacklist! [this host])
-  (-select-host [this]))
+  (-add-host! [this host])                                  ;;"Called from outside the driver to notify addition of a host"
+  (-remove-host! [this host])                               ;;"Called from outside the driver to notify removal of a host"
+  (-blacklist! [this host])                                 ;;"Node should be blacklisted, called from outside of the driver to notify blacklisting of a host"
+  (-on-error! [this host throwable])                        ;;"Communicate exceptions back to the routing policy, default is to blacklist the host"
+  (-select-host [this]))                                    ;; "Driver calls to select  host from the routing policy"
 
 
 ;;;;;;;;;;;;;
@@ -31,6 +32,10 @@
 
 (defrecord DefaultRountingPolicy [hosts-at black-listed-hosts-cache select-f]
   IRoute
+
+  (-on-error! [this host throwable]
+    (-blacklist! this host))
+
   (-add-host! [_ host]
     (ensure-host-address-schema! host)
     (swap! hosts-at conj host))

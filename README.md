@@ -79,6 +79,41 @@ The routing-conf arg must have the schema ```{:keys [select-f blacklist-expire]}
 The default select-f used is rand-nth.  
 The function will receive a list of host map items and can select between any of them.  
 
+On any exception in ```send-f``` the default routing policy will blacklist the node.
+
+#### Adding removing hosts
+
+
+*Usage*
+
+```clojure
+(require '[tcp-driver.driver :as tcp-driver])
+
+(def driver (tcp-driver/create-default [{:host "localhost" :port (:port server)}]))
+
+;;; add a host to the driver
+(tcp-driver/add-host driver {:host "myhost" :port 123})
+
+;;; remove a host from the driver
+(tcp-driver/remove-host driver {:host "myhost" :port 123})
+
+;;; blacklist a host -- this means the host will not be used for a certain amount of time defined in the routing policy
+(tcp-driver/blacklist-host driver {:host "myhost" :port 123})
+
+```
+
+*Routing Policy*
+
+The namespace ```tcp-driver.routing.policy``` contains the protocols and defaults for defining routing policies and their behaviours.
+
+The ```tcp-driver.driver/create-default``` function uses the ```DefaultRountingPolicy``` ```IRoute``` policy which
+
+*   Selects hosts randomly
+*   Blacklist any nodes if any exception reported
+
+
+To define a custom routing policy create you're own driver constructor method using ```tcp-driver.driver/create-default``` as an example,
+and define an implementation of the ```IRoute``` protocol.
 
 
 ### Retry Policy

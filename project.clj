@@ -1,4 +1,4 @@
-(defproject tcp-driver "0.1.0"
+(defproject tcp-driver "0.1.1-SNAPSHOT"
   :description "Java/Clojure TCP Connections done right"
   :url "https://github.com/gerritjvv/tcp-driver"
   :license {:name "Eclipse Public License"
@@ -13,10 +13,10 @@
   :source-paths ["src/clojure"]
   :java-source-paths ["src/java"]
   :dependencies [
-                 [org.clojure/clojure "1.7.0"]
+                 [org.clojure/clojure "1.8.0"]
 
-                 [fun-utils "0.5.9"]
+                 [fun-utils "0.6.2"]
                  [org.apache.commons/commons-pool2 "2.4.2"]
-                 [prismatic/schema "1.0.1"]]
+                 [prismatic/schema "1.1.3"]]
 
-  :plugins [[jonase/eastwood "0.2.1"]])
+  :plugins [[jonase/eastwood "0.2.3"]])

@@ -57,14 +57,22 @@
   [ctx io-f timeout-ms]
   {:pre [ctx io-f timeout-ms]}
   (if-let [host (routing/-select-host (:routing-policy ctx))]
+    
     (let [pool (:pool ctx)]
+     
       (if-let [conn (tcp-pool/borrow pool host timeout-ms)]
+      
         (try
           (io-f conn)
+          (catch Throwable t 
+		(routing/-on-error! (:routing-policy ctx) host t)
+                (throw t))
           (finally
             (tcp-pool/return pool host conn)))
+        
         (throw-no-connection!)))
-    (throw-no-connection!)))
+    
+      (throw-no-connection!)))
 
 (defn retry-select-send!
   "Send with the retry-policy, select-send! will be retried depending on the retry policy"
@@ -100,6 +108,9 @@
   "Create a driver with the default settings for tcp-pool, routing and retry-policy
    hosts: a vector or seq of {:host :port} maps
    return: DriverRetSchema
+
+   Routing policy: The default routing policy will select hosts at random and on any exception blacklist a particular host.
+                   To add/remove/blacklist a node use the public functions add-host, remove-host and blacklist-host in this namespace.
   "
   ^{:arg-lists [routing-conf pool-conf retry-limit]}
   [hosts & {:keys [routing-conf pool-conf retry-limit] :or {retry-limit 10 routing-conf {} pool-conf {}}}]
@@ -118,3 +129,17 @@
   ^{:arg-lists [pool]}
   [{:keys [pool]}]
   (tcp-pool/close pool))
+
+(defn add-host [{:keys [routing-policy]} host]
+  {:pre [(s/validate tcp-conn/HostAddressSchema host)]}
+  (routing/-add-host! routing-policy host))
+
+(defn remove-host [{:keys [routing-policy]} host]
+  {:pre [(s/validate tcp-conn/HostAddressSchema host)]}
+  (routing/-remove-host! routing-policy host))
+
+(defn blacklist-host [{:keys [routing-policy]} host]
+   {:pre [(s/validate tcp-conn/HostAddressSchema host)]}
+  (routing/-blacklist! routing-policy host))
+
+
