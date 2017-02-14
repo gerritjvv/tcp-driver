@@ -13,6 +13,7 @@
 ;;;;; Protocols and records
 
 (defprotocol IRoute
+  (-hosts [this])                                           ;;return the hosts {:host :port} currently managed by the routing policy
   (-add-host! [this host])                                  ;;"Called from outside the driver to notify addition of a host"
   (-remove-host! [this host])                               ;;"Called from outside the driver to notify removal of a host"
   (-blacklist! [this host])                                 ;;"Node should be blacklisted, called from outside of the driver to notify blacklisting of a host"
@@ -32,6 +33,8 @@
 
 (defrecord DefaultRountingPolicy [hosts-at black-listed-hosts-cache select-f]
   IRoute
+
+  (-hosts [this] @hosts-at)
 
   (-on-error! [this host throwable]
     (-blacklist! this host))

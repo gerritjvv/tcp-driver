@@ -24,6 +24,7 @@
 
   (:require
     [schema.core :as s]
+    [clojure.tools.logging :refer [error]]
     [tcp-driver.io.pool :as tcp-pool]
     [tcp-driver.io.conn :as tcp-conn]
     [tcp-driver.routing.policy :as routing]
@@ -37,109 +38,124 @@
 
 (def IRetrySchema (s/pred #(satisfies? retry/IRetry %)))
 
-(def IPoolSchema  (s/pred #(satisfies? tcp-pool/IPool %)))
+(def IPoolSchema (s/pred #(satisfies? tcp-pool/IPool %)))
 
-(def DriverRetSchema {:pool tcp-pool/IPoolSchema
+(def DriverRetSchema {:pool           tcp-pool/IPoolSchema
                       :routing-policy IRouteSchema
-                      :retry-policy IRetrySchema})
+                      :retry-policy   IRetrySchema})
 
 
 ;;;;;;;;;;;;;;
 ;;;;;; Private functions
 
 (defn throw-no-connection! []
-  (throw (RuntimeException. "No connection is available to perform the send")))
+      (throw (RuntimeException. "No connection is available to perform the send")))
 
 (defn select-send!
-  "ctx - DriverRetSchema
-   io-f - function that takes a connection and on error throws an exception
-   timeout-ms - connection timeout"
-  [ctx io-f timeout-ms]
-  {:pre [ctx io-f timeout-ms]}
-  (if-let [host (routing/-select-host (:routing-policy ctx))]
-    
-    (let [pool (:pool ctx)]
-     
-      (if-let [conn (tcp-pool/borrow pool host timeout-ms)]
-      
-        (try
-          (io-f conn)
-          (catch Throwable t 
-		(routing/-on-error! (:routing-policy ctx) host t)
-                (throw t))
-          (finally
-            (tcp-pool/return pool host conn)))
-        
-        (throw-no-connection!)))
-    
-      (throw-no-connection!)))
+      "ctx - DriverRetSchema
+       io-f - function that takes a connection and on error throws an exception
+       timeout-ms - connection timeout"
+      [ctx io-f timeout-ms]
+      {:pre [ctx io-f timeout-ms]}
+      (loop [i 0]
+            (if-let [host (routing/-select-host (:routing-policy ctx))]
+
+                    (let [pool (:pool ctx)]
+
+                         ;;;try the io-f, if an exception then only if we haven't tried (count hosts) already
+                         ;;;loop and retry, its expected that the routing policy blacklist or remove the host on error
+
+                         (let [res (try
+
+                                     (if-let [conn (tcp-pool/borrow pool host timeout-ms)]
+
+                                             (try
+                                               (io-f conn)
+                                               (finally
+                                                 (tcp-pool/return pool host conn)))
+
+                                             (throw-no-connection!))
+
+                                     (catch Exception t
+                                       (routing/-on-error! (:routing-policy ctx) host t)
+                                       (ex-info (str "Error while connecting to " host) {:throwable t :host host :retries i :hosts (routing/-hosts (:routing-policy ctx))})))]
+
+                              (if (instance? Throwable res)
+                                (do
+                                  (error res)
+                                  (if (< i (count (routing/-hosts (:routing-policy ctx))))
+                                    (recur (inc i))
+                                    (throw res)))
+                                res)))
+
+                    (throw-no-connection!))))
 
 (defn retry-select-send!
-  "Send with the retry-policy, select-send! will be retried depending on the retry policy"
-  [{:keys [retry-policy] :as ctx} io-f timeout-ms]
-  {:pre [retry-policy]}
-  (retry/with-retry retry-policy #(select-send! ctx io-f timeout-ms)))
+      "Send with the retry-policy, select-send! will be retried depending on the retry policy"
+      [{:keys [retry-policy] :as ctx} io-f timeout-ms]
+      {:pre [retry-policy]}
+      (retry/with-retry retry-policy #(select-send! ctx io-f timeout-ms)))
 
 
 ;; routing-policy is a function to which we pass the routing-env atom, which contains {:hosts (set [tcp-conn/HostAddressSchema]) } by default
-(s/defn create [pool            :- IPoolSchema
-                routing-policy  :- IRouteSchema
-                retry-policy    :- IRetrySchema
+(s/defn create [pool :- IPoolSchema
+                routing-policy :- IRouteSchema
+                retry-policy :- IRetrySchema
                 ] :- DriverRetSchema
-  {:pool pool
-   :routing-policy routing-policy
-   :retry-policy retry-policy})
+        {:pool           pool
+         :routing-policy routing-policy
+         :retry-policy   retry-policy})
 
 ;;;;;;;;;;;;;;;;
 ;;;;;; Public API
 
 (defn send-f
-  "
-   Apply the io-f with a connection from the connection pool selected based on
-     the retry policy, and retried if exceptions in the io-f based on the retry policy
-   ctx - returned from create
-   io-f - function that should accept the tcp-driver.io.conn/ITCPConn
-   timeout-ms - the timeout for connection borrow"
-  [ctx io-f timeout-ms]
-  (retry-select-send! ctx io-f timeout-ms))
+      "
+       Apply the io-f with a connection from the connection pool selected based on
+         the retry policy, and retried if exceptions in the io-f based on the retry policy
+       ctx - returned from create
+       io-f - function that should accept the tcp-driver.io.conn/ITCPConn
+       timeout-ms - the timeout for connection borrow"
+      [ctx io-f timeout-ms]
+      (retry-select-send! ctx io-f timeout-ms))
 
 
 (defn create-default
-  "Create a driver with the default settings for tcp-pool, routing and retry-policy
-   hosts: a vector or seq of {:host :port} maps
-   return: DriverRetSchema
+      "Create a driver with the default settings for tcp-pool, routing and retry-policy
+       hosts: a vector or seq of {:host :port} maps
+       return: DriverRetSchema
 
-   Routing policy: The default routing policy will select hosts at random and on any exception blacklist a particular host.
-                   To add/remove/blacklist a node use the public functions add-host, remove-host and blacklist-host in this namespace.
-  "
-  ^{:arg-lists [routing-conf pool-conf retry-limit]}
-  [hosts & {:keys [routing-conf pool-conf retry-limit] :or {retry-limit 10 routing-conf {} pool-conf {}}}]
-  {:pre [
-         (s/validate tcp-pool/PoolConfSchema pool-conf)
-         (s/validate [tcp-conn/HostAddressSchema] hosts)
-         (number? retry-limit)
-         ]}
-  (create
-    (tcp-pool/create-tcp-pool pool-conf)
-    (apply routing/create-default-routing-policy hosts (mapcat identity routing-conf))
-    (retry/retry-policy retry-limit)))
+       Routing policy: The default routing policy will select hosts at random and on any exception blacklist a particular host.
+                       To add/remove/blacklist a node use the public functions add-host, remove-host and blacklist-host in this namespace.
+      "
+      ^{:arg-lists [routing-conf pool-conf retry-limit]}
+      [hosts & {:keys [routing-conf pool-conf retry-limit] :or {retry-limit 10 routing-conf {} pool-conf {}}}]
+      {:pre [
+             (s/validate tcp-pool/PoolConfSchema pool-conf)
+             (s/validate [tcp-conn/HostAddressSchema] hosts)
+             (number? retry-limit)
+             ]}
+      (create
+        (tcp-pool/create-tcp-pool pool-conf)
+        (apply routing/create-default-routing-policy hosts (mapcat identity routing-conf))
+        (retry/retry-policy retry-limit)))
 
 (defn close
-  "Close the driver connection pool"
-  ^{:arg-lists [pool]}
-  [{:keys [pool]}]
-  (tcp-pool/close pool))
+      "Close the driver connection pool"
+      ^{:arg-lists [pool]}
+      [{:keys [pool]}]
+      (tcp-pool/close pool))
 
 (defn add-host [{:keys [routing-policy]} host]
-  {:pre [(s/validate tcp-conn/HostAddressSchema host)]}
-  (routing/-add-host! routing-policy host))
+      {:pre [(s/validate tcp-conn/HostAddressSchema host)]}
+      (routing/-add-host! routing-policy host))
 
 (defn remove-host [{:keys [routing-policy]} host]
-  {:pre [(s/validate tcp-conn/HostAddressSchema host)]}
-  (routing/-remove-host! routing-policy host))
+      {:pre [(s/validate tcp-conn/HostAddressSchema host)]}
+      (routing/-remove-host! routing-policy host))
 
 (defn blacklist-host [{:keys [routing-policy]} host]
-   {:pre [(s/validate tcp-conn/HostAddressSchema host)]}
-  (routing/-blacklist! routing-policy host))
+      {:pre [(s/validate tcp-conn/HostAddressSchema host)]}
+      (routing/-blacklist! routing-policy host))
 
 
