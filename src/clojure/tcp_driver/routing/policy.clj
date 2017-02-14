@@ -5,8 +5,7 @@
   (:require [schema.core :as s]
             [fun-utils.cache :as cache]
             [clojure.set :as clj-set]
-            [tcp-driver.io.conn :as tcp-conn])
-  (:import (clojure.lang Atom)))
+            [tcp-driver.io.conn :as tcp-conn]))
 
 
 ;;;;;;;;;;;;;;;;;
@@ -37,7 +36,11 @@
   (-hosts [this] @hosts-at)
 
   (-on-error! [this host throwable]
-    (-blacklist! this host))
+
+     ;;only blacklist when not a broken pipe.
+     ;;note that the calling code must close the connection, otherwise errors will repeat
+    (when-not (.contains ^String (str throwable) "Broken")
+              (-blacklist! this host)))
 
   (-add-host! [_ host]
     (ensure-host-address-schema! host)
