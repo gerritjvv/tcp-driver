@@ -171,6 +171,6 @@
       (routing/-blacklist! routing-policy host))
 
 
-(defn blacklist-host [{:keys [routing-policy]} host]
+(defn blacklisted? [{:keys [routing-policy]} host]
       {:pre [(s/validate tcp-conn/HostAddressSchema host)]}
       (routing/-blacklisted? routing-policy host))
