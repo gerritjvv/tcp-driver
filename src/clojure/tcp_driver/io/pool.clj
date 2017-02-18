@@ -19,7 +19,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;Protocols
 
-(def PoolConfSchema {(s/optional-key :max-idle-per-key) s/Int
+(def PoolConfSchema {(s/optional-key :post-create-fn)  s/Any ;(s/=> s/Any {:address tcp-conn/HostAddressSchema :conn tcp-conn/ITCPConnSchema})
+                     (s/optional-key :pre-destroy-fn)  s/Any ;(s/=> s/Any {:address tcp-conn/HostAddressSchema :conn tcp-conn/ITCPConnSchema})
+                     (s/optional-key :max-idle-per-key) s/Int
                      (s/optional-key :max-total) s/Int
                      (s/optional-key :max-total-per-key) s/Int
                      (s/optional-key :min-idle-per-key) s/Int
@@ -123,7 +125,8 @@
   [conf :- PoolConfSchema]
   ;;create a tcp pool factory where each key is the address to connect to
   (let [pool
-        (->KeyedTCPConnFactory (GenericKeyedObjectPool. (tcp-conn/tcp-conn-factory)
+        (->KeyedTCPConnFactory (GenericKeyedObjectPool. (tcp-conn/tcp-conn-factory (get conf :post-create-fn identity)
+                                                                                   (get conf :pre-destroy-create-fn identity))
                                                         (keyed-pool-config conf)))]
 
     (when (:close-pool-jvm-shutdown conf)

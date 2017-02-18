@@ -23,7 +23,7 @@
   (-close [this])
   (-valid? [this]))
 
-(def ITCPConnSchema (s/pred (partial extends? ITCPConn)))
+(def ITCPConnSchema (s/pred (partial satisfies? ITCPConn)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;Private
@@ -78,20 +78,32 @@
 
 (defn ^KeyedPooledObjectFactory tcp-conn-factory
   "Return a keyed pool factory that return ITCPConn instances
-   The keys used should always be instances of HostAddress or implement host and port keys"
-  []
-  (proxy
-    [BaseKeyedPooledObjectFactory]
-    []
-    (create [address]
-      (s/validate HostAddressSchema address)
+   The keys used should always be instances of HostAddress or implement host and port keys
 
-      (create-tcp-conn address))
+   post-create-fn: is called after the connection has been created
+   pre-destroy-fn is called before the connection is destroyed"
+  ([]
+    (tcp-conn-factory identity identity))
+  ([post-create-fn pre-destroy-fn]
+    (let [post-create-fn' (if post-create-fn post-create-fn identity)
+          pre-destroy-fn' (if pre-destroy-fn pre-destroy-fn identity)]
 
-    (wrap [v] (DefaultPooledObject. v))
+         (proxy
+           [BaseKeyedPooledObjectFactory]
+           []
+           (create [address]
+                   (s/validate HostAddressSchema address)
 
-    (destroyObject [_ ^PooledObject v]
-      (close! (.getObject v)))
+                   (let [conn (create-tcp-conn address)]
+                        (post-create-fn' {:address address :conn conn})
+                        conn))
 
-    (validateObject [_ ^PooledObject v]
-      (valid? (.getObject v)))))
+           (wrap [v] (DefaultPooledObject. v))
+
+           (destroyObject [address ^PooledObject v]
+                          (let [conn (.getObject v)]
+                               (pre-destroy-fn' {:address address :conn conn})
+                               (close! conn)))
+
+           (validateObject [_ ^PooledObject v]
+                           (valid? (.getObject v)))))))

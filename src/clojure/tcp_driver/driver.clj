@@ -137,6 +137,8 @@
        hosts: a vector or seq of {:host :port} maps
        return: DriverRetSchema
 
+       pool-conf : tcp-driver.io.pool/PoolConfSchema
+
        Routing policy: The default routing policy will select hosts at random and on any exception blacklist a particular host.
                        To add/remove/blacklist a node use the public functions add-host, remove-host and blacklist-host in this namespace.
       "

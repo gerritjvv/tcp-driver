@@ -11,26 +11,38 @@
 
 
 (defn write-msg [conn msg]
-  (tcp-stream/write-short-str conn (str msg))
-  conn)
+      (tcp-stream/write-short-str conn (str msg))
+      conn)
 
 (defn read-msg [conn timeout-ms]
-  (tcp-stream/read-short-str conn timeout-ms))
+      (tcp-stream/read-short-str conn timeout-ms))
 
-(defn send-io-f [io-f]
-  (test-util/with-echo-server
-    (fn [server]
-      (let [driver (tcp-driver/create-default [{:host "localhost" :port (:port server)}])
-            ret-msg (tcp-driver/send-f
-                      driver
-                      io-f
-                      10000)]
-        ;;use ret-msg to make it clear thta io-f return value via tcp-driver/send-f
-        ret-msg))))
+(defn send-io-f [io-f & {:keys [post-create-fn pre-destroy-fn]}]
+      (test-util/with-echo-server
+        (fn [server]
+            (let [driver (tcp-driver/create-default [{:host "localhost" :port (:port server)}] :pool-conf {:post-create-fn post-create-fn :pre-destroy-fn pre-destroy-fn})
+                  ret-msg (tcp-driver/send-f
+                            driver
+                            io-f
+                            10000)]
+                 ;;use ret-msg to make it clear thta io-f return value via tcp-driver/send-f
+                 (tcp-driver/close driver)
+                 ret-msg))))
 
 
 (deftest test-send-receive
-  []
-  ;;write hi, then read it
- (is (=  (send-io-f #(read-msg (write-msg % "HI") 1000))
-         "HI")))
+         []
+         ;;write hi, then read it
+         (is (= (send-io-f #(read-msg (write-msg % "HI") 1000))
+                "HI")))
+
+(deftest test-validate-fns
+         []
+         (let [post-create (atom nil)]
+
+              (is (= (send-io-f #(read-msg (write-msg % "HI") 1000)
+                                :post-create-fn (fn [_] (swap! post-create (constantly (System/nanoTime)))))
+                     "HI"))
+
+
+              (is (number? @post-create))))
