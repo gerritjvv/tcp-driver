@@ -74,8 +74,8 @@
 
                                                (try
                                                  (io-f conn)
-                                                 (catch IOException e
-                                                   ;;any io exception will cause invalidation of the connection.
+                                                 (catch Throwable e
+                                                   ;;any exception will cause invalidation of the connection.
                                                    (tcp-pool/invalidate pool host conn)
                                                    (throw e))
                                                  (finally

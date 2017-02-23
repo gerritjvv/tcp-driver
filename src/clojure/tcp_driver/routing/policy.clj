@@ -37,11 +37,7 @@
            (-hosts [this] @hosts-at)
 
            (-on-error! [this host throwable]
-
-                       ;;only blacklist when not a broken pipe.
-                       ;;note that the calling code must close the connection, otherwise errors will repeat
-                       (when-not (.contains ^String (str throwable) "Broken")
-                                 (-blacklist! this host)))
+                       (-blacklist! this host))
 
            (-add-host! [_ host]
                        (ensure-host-address-schema! host)
