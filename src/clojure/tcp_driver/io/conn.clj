@@ -85,8 +85,8 @@
   ([]
     (tcp-conn-factory identity identity))
   ([post-create-fn pre-destroy-fn]
-    (let [post-create-fn' (if post-create-fn post-create-fn identity)
-          pre-destroy-fn' (if pre-destroy-fn pre-destroy-fn identity)]
+    (let [post-create-fn' (if post-create-fn post-create-fn :conn)
+          pre-destroy-fn' (if pre-destroy-fn pre-destroy-fn :conn)]
 
          (proxy
            [BaseKeyedPooledObjectFactory]
@@ -95,8 +95,7 @@
                    (s/validate HostAddressSchema address)
 
                    (let [conn (create-tcp-conn address)]
-                        (post-create-fn' {:address address :conn conn})
-                        conn))
+                        (post-create-fn' {:address address :conn conn})))
 
            (wrap [v] (DefaultPooledObject. v))
 

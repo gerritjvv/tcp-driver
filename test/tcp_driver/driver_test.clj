@@ -41,7 +41,9 @@
          (let [post-create (atom nil)]
 
               (is (= (send-io-f #(read-msg (write-msg % "HI") 1000)
-                                :post-create-fn (fn [_] (swap! post-create (constantly (System/nanoTime)))))
+                                :post-create-fn (fn [ctx]
+                                                    (swap! post-create (constantly (System/nanoTime)))
+                                                    (:conn ctx)))
                      "HI"))
 
 
