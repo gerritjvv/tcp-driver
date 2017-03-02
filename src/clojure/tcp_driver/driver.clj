@@ -51,10 +51,6 @@
 (defn throw-no-connection! []
       (throw (RuntimeException. "No connection is available to perform the send")))
 
-(defn safe-return [pool host conn]
-      (try
-        (tcp-pool/return pool host conn)
-        (catch IllegalStateException ie nil)))
 
 (defn select-send!
       "ctx - DriverRetSchema
@@ -84,7 +80,9 @@
                                                    (tcp-pool/invalidate pool host conn)
                                                    (throw e))
                                                  (finally
-                                                   (safe-return pool host conn)))
+                                                   (try
+                                                     (tcp-pool/return pool host conn)
+                                                     (catch Exception e nil))))
 
                                                (throw-no-connection!))
 
