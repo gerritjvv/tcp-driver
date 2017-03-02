@@ -69,19 +69,21 @@
                            ;;;try the io-f, if an exception then only if we haven't tried (count hosts) already
                            ;;;loop and retry, its expected that the routing policy blacklist or remove the host on error
 
-                           (let [res (try
+                           (let [host-key (select-keys host [:host :port])
+                                 res (try
 
-                                       (if-let [conn (tcp-pool/borrow pool host timeout-ms)]
+                                       (if-let [
+                                                conn (tcp-pool/borrow pool host-key timeout-ms)]
 
                                                (try
                                                  (io-f conn)
                                                  (catch Throwable e
                                                    ;;any exception will cause invalidation of the connection.
-                                                   (tcp-pool/invalidate pool host conn)
+                                                   (tcp-pool/invalidate pool host-key conn)
                                                    (throw e))
                                                  (finally
                                                    (try
-                                                     (tcp-pool/return pool host conn)
+                                                     (tcp-pool/return pool host-key conn)
                                                      (catch Exception e nil))))
 
                                                (throw-no-connection!))
@@ -89,10 +91,10 @@
                                        (catch Exception t
 
                                          ;;blacklist host
-                                         (routing/-blacklist! (:routing-policy ctx) host)
+                                         (routing/-blacklist! (:routing-policy ctx) host-key)
 
-                                         (routing/-on-error! (:routing-policy ctx) host t)
-                                         (ex-info (str "Error while connecting to " host) {:throwable t :host host :retries i :hosts (routing/-hosts (:routing-policy ctx))})))]
+                                         (routing/-on-error! (:routing-policy ctx) host-key t)
+                                         (ex-info (str "Error while connecting to " host-key) {:throwable t :host host-key :retries i :hosts (routing/-hosts (:routing-policy ctx))})))]
 
                                 (if (instance? Throwable res)
                                   (do
