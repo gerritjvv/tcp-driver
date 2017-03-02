@@ -37,6 +37,7 @@
            (-hosts [this] @hosts-at)
 
            (-on-error! [this host throwable]
+                       (prn "DefaultRountingPolicy:-on-error " host)
                        (-blacklist! this host))
 
            (-add-host! [_ host]
@@ -53,10 +54,12 @@
 
            (-blacklist! [_ host]
                         (ensure-host-address-schema! host)
+                        (prn "DefaultRountingPolicy:-blacklist " host " in " black-listed-hosts-cache)
                         (assoc black-listed-hosts-cache host true))
 
            (-select-host [_]
                          (let [available-hosts (into [] (clj-set/difference @hosts-at (set (keys black-listed-hosts-cache))))]
+                              (prn "DefaultRountingPolicy:-select-host " available-hosts)
                               (when (pos? (count available-hosts))
                                     (rand-nth available-hosts)))))
 

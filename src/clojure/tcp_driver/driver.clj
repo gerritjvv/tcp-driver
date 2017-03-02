@@ -51,6 +51,11 @@
 (defn throw-no-connection! []
       (throw (RuntimeException. "No connection is available to perform the send")))
 
+(defn safe-return [pool host conn]
+      (try
+        (tcp-pool/return pool host conn)
+        (catch IllegalStateException ie nil)))
+
 (defn select-send!
       "ctx - DriverRetSchema
        host-address if specified this host is used, otherwise the routing policy is asked for a host
@@ -79,11 +84,15 @@
                                                    (tcp-pool/invalidate pool host conn)
                                                    (throw e))
                                                  (finally
-                                                   (tcp-pool/return pool host conn)))
+                                                   (safe-return pool host conn)))
 
                                                (throw-no-connection!))
 
                                        (catch Exception t
+
+                                         ;;blacklist host
+                                         (routing/-blacklist! (:routing-policy ctx) host)
+
                                          (routing/-on-error! (:routing-policy ctx) host t)
                                          (ex-info (str "Error while connecting to " host) {:throwable t :host host :retries i :hosts (routing/-hosts (:routing-policy ctx))})))]
 

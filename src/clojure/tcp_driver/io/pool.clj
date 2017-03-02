@@ -103,11 +103,11 @@
      conn connection to return"
   [pool address conn]
   {:pre [(s/validate tcp-conn/HostAddressSchema address)]}
-  (-return pool address conn))
+  (-return pool (select-keys address [:host :port]) conn))
 
 (defn invalidate [pool address conn]
   {:pre [(s/validate tcp-conn/HostAddressSchema address)]}
-  (-invalidate pool address conn))
+  (-invalidate pool (select-keys address [:host :port]) conn))
 
 (defn close [pool]
   (-close pool))
