@@ -42,20 +42,20 @@
 
            (-add-host! [_ host]
                        (ensure-host-address-schema! host)
-                       (swap! hosts-at conj host))
+                       (swap! hosts-at conj (select-keys host [:host :port])))
 
            (-remove-host! [_ host]
                           (ensure-host-address-schema! host)
-                          (swap! hosts-at disj host))
+                          (swap! hosts-at disj (select-keys host [:host :port])))
 
            (-blacklisted? [_ host]
                           (ensure-host-address-schema! host)
-                          (get black-listed-hosts-cache host))
+                          (get black-listed-hosts-cache (select-keys host [:host :port])))
 
            (-blacklist! [_ host]
                         (ensure-host-address-schema! host)
                         (prn "DefaultRountingPolicy:-blacklist " host " in " black-listed-hosts-cache)
-                        (assoc black-listed-hosts-cache host true))
+                        (assoc black-listed-hosts-cache (select-keys host [:host :port]) true))
 
            (-select-host [_]
                          (let [available-hosts (into [] (clj-set/difference @hosts-at (set (keys black-listed-hosts-cache))))]
