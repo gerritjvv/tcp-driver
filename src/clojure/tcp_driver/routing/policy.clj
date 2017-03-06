@@ -49,7 +49,6 @@
 
            (-blacklisted? [_ host]
                           (ensure-host-address-schema! host)
-
                           (contains? black-listed-hosts-cache host))
 
            (-blacklist! [this host]
