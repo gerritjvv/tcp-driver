@@ -43,7 +43,6 @@
 ;;;;;;;;;;;;Private
 
 
-
 (defrecord KeyedTCPConnFactory [^GenericKeyedObjectPool pool]
 
   IPool
@@ -121,19 +120,24 @@
   ([pool key] (-num-active pool key)))
 
 
-(s/defn
-  create-tcp-pool :- IPoolSchema
-  [conf :- PoolConfSchema]
-  ;;create a tcp pool factory where each key is the address to connect to
-  (let [pool
-        (->KeyedTCPConnFactory (GenericKeyedObjectPool. (tcp-conn/tcp-conn-factory (get conf :post-create-fn :conn)
-                                                                                   (get conf :pre-destroy-create-fn :conn))
-                                                        (keyed-pool-config conf)))]
+(defn create-tcp-pool
+      "create a tcp pool factory where each key is the address to connect to"
+      [conf]
+      (let [pool
+            (->KeyedTCPConnFactory (GenericKeyedObjectPool. (tcp-conn/tcp-conn-factory (get conf :post-create-fn :conn)
+                                                                                       (get conf :pre-destroy-create-fn :conn))
+                                                            (keyed-pool-config conf)))]
 
-    (when (:close-pool-jvm-shutdown conf)
-      (.addShutdownHook (Runtime/getRuntime) (Thread. #(close pool))))
+           (when (:close-pool-jvm-shutdown conf)
+                 (.addShutdownHook (Runtime/getRuntime) (Thread. #(close pool))))
 
-    pool))
+           pool))
+
+;(s/defn REMOVED the schema definitions causing java.lang.ClassCastException: schema.utils.SimpleVCell cannot be cast to issues
+;  create-tcp-pool :- IPoolSchema
+;  [conf :- PoolConfSchema]
+;  ;;create a tcp pool factory where each key is the address to connect to
+;  )
 
 
 (defn try-conn
