@@ -117,13 +117,28 @@
 
 
 ;; routing-policy is a function to which we pass the routing-env atom, which contains {:hosts (set [tcp-conn/HostAddressSchema]) } by default
-(s/defn create [pool :- IPoolSchema
-                routing-policy :- IRouteSchema
-                retry-policy :- IRetrySchema
-                ] :- DriverRetSchema
-        {:pool           pool
-         :routing-policy routing-policy
-         :retry-policy   retry-policy})
+
+(defn create
+      "
+      pool :- IPoolSchema routing-policy :- IRouteSchema retry-policy :- IRetrySchema
+      ret DriverRetSchema
+      "
+      [pool
+       routing-policy
+       retry-policy]
+      {:pool           pool
+       :routing-policy routing-policy
+       :retry-policy   retry-policy})
+
+;(s/defn create [pool :- IPoolSchema Commented due to class cast exceptions in schema checking
+;                routing-policy :- IRouteSchema
+;                retry-policy :- IRetrySchema
+;                ] :- DriverRetSchema
+;        {:pool           pool
+;         :routing-policy routing-policy
+;         :retry-policy   retry-policy})
+
+
 
 ;;;;;;;;;;;;;;;;
 ;;;;;; Public API
@@ -154,8 +169,8 @@
       ^{:arg-lists [routing-conf pool-conf retry-limit]}
       [hosts & {:keys [routing-conf pool-conf retry-limit] :or {retry-limit 10 routing-conf {} pool-conf {}}}]
       {:pre [
-             (s/validate tcp-pool/PoolConfSchema pool-conf)
-             (s/validate [tcp-conn/HostAddressSchema] hosts)
+             ;(s/validate tcp-pool/PoolConfSchema pool-conf) REMOVED the schema definitions causing java.lang.ClassCastException: schema.utils.SimpleVCell cannot be cast to issues
+             ;(s/validate [tcp-conn/HostAddressSchema] hosts)
              (number? retry-limit)
              ]}
       (create
