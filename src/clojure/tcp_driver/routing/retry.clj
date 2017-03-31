@@ -38,9 +38,13 @@
 ;;;;;;;;;;;;;;;;;
 ;;;;;; Public Functions
 
-(s/defn with-retry [retry-policy :- (s/pred #(satisfies? IRetry %))
-                    f :- (s/pred fn?)]
-  (-try-action retry-policy f))
+(defn with-retry [retry-policy f]
+        (-try-action retry-policy f))
+
+; Commented to avoid SimpleVCell ClassCastException(s)
+;(s/defn with-retry [retry-policy :- (s/pred #(satisfies? IRetry %))
+;                    f :- (s/pred fn?)]
+;  (-try-action retry-policy f))
 
 (defn retry-policy [retry-limit]
   {:pre [(number? retry-limit)]}
