@@ -7,7 +7,7 @@ were not written or treated with the equivalent importance as server connections
 
 Writing the TCP connection as if it were a product driver sets a certain design mindset.
 
-For design decisions see: https://github.com/gerritjvv/tcp-driver/blob/master/doc/intro.md
+For design decisions see: https://github.com/gerritjvv/tcp-driver/blob/master/doc/design.md
 
 [![Build Status](https://travis-ci.org/gerritjvv/tcp-driver.svg)](https://travis-ci.org/gerritjvv/tcp-driver)
 
